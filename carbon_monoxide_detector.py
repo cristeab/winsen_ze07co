@@ -65,19 +65,6 @@ class CarbonMonoxideDetector:
                     return None
         return None
 
-    def read_loop(self):
-        self.connect()
-        try:
-            while True:
-                ppm = self.read_once()
-                if ppm is not None:
-                    print(f"{datetime.now()}: CO Concentration: {ppm} PPM")
-                time.sleep(0.1)
-        except KeyboardInterrupt:
-            print("\nStopping...")
-        finally:
-            if self.ser and self.ser.is_open:
-                self.ser.close()
 
 if __name__ == "__main__":
     co_detector = CarbonMonoxideDetector()
