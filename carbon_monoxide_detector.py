@@ -61,7 +61,7 @@ class CarbonMonoxideDetector:
                     
                     return ppm
                 else:
-                    self.logger.error("Checksum mismatch! Data corrupted.")
+                    self.logger.warning("Checksum mismatch! Data corrupted.")
                     return None
         return None
 
