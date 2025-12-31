@@ -65,7 +65,7 @@ class CarbonMonoxideDetector:
                     return None
         return None
 
-
+# Example usage
 if __name__ == "__main__":
     co_detector = CarbonMonoxideDetector()
     while True:
