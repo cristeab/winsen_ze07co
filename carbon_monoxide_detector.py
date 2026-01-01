@@ -8,7 +8,10 @@ import logging
 
 
 class CarbonMonoxideDetector:
-    def __init__(self, logger=None, level=logging.INFO, port='/dev/ttyACM0', baud=9600):
+    BAUD_RATE = 9600
+    PACKET_SIZE = 9
+    START_BYTE = b'\xff'
+    def __init__(self, port='/dev/ttyACM0', logger=None, level=logging.INFO):
         if logger is None:
             logging.basicConfig(level=level)
             self.logger = logging.getLogger(self.__class__.__name__)
@@ -16,8 +19,8 @@ class CarbonMonoxideDetector:
             self.logger = logger
 
         try:
-            self._ser = serial.Serial(port, baud, timeout=1)
-            self.logger.info(f"Connected to {port} at {baud} baud.")
+            self._ser = serial.Serial(port, self.BAUD_RATE, timeout=1)
+            self.logger.info(f"Connected to {port} at {self.BAUD_RATE} bauds.")
         except serial.SerialException as e:
             self.logger.error(f"Serial Error: {e}")
             raise
@@ -42,15 +45,15 @@ class CarbonMonoxideDetector:
         if not byte:
             return None
             
-        if byte == b'\xff':
+        if byte == self.START_BYTE:
             # Read the remaining 8 bytes of the packet
-            data = self._ser.read(8)
+            data = self._ser.read(self.PACKET_SIZE - 1)
             
-            if len(data) == 8:
-                full_packet = b'\xff' + data
+            if len(data) == (self.PACKET_SIZE - 1):
+                full_packet = self.START_BYTE + data
                 
                 # Verify Checksum
-                received_checksum = full_packet[8]
+                received_checksum = full_packet[self.PACKET_SIZE - 1]
                 calculated_checksum = CarbonMonoxideDetector._calculate_checksum(full_packet)
                 
                 if received_checksum == calculated_checksum:
