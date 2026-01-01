@@ -1,4 +1,4 @@
 # winsen_ze07c0
 Winsen ZE07 CO sensor firmware
 
-This script assumes that the sensor is configured in mode 1 and reads continously data sent over the serial port.
+Both modes, initiative upload and question and answer modes, can be configured to read data from the sensor.

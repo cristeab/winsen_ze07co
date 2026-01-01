@@ -24,7 +24,6 @@ class CarbonMonoxideDetector:
         except serial.SerialException as e:
             self.logger.error(f"Serial Error: {e}")
             raise
-        self._set_initiative_upload_mode()
 
     @staticmethod
     def _calculate_checksum(data):
@@ -33,7 +32,7 @@ class CarbonMonoxideDetector:
         checksum = ((~checksum) & 0xFF) + 1
         return checksum & 0xFF
 
-    def _set_initiative_upload_mode(self):
+    def set_initiative_upload_mode(self):
         if not self._ser or not self._ser.is_open:
             self.logger.error("Serial port not open")
             return False
@@ -42,11 +41,11 @@ class CarbonMonoxideDetector:
         checksum = CarbonMonoxideDetector._calculate_checksum(command)
         command.append(checksum)
 
-        self.logger.info("Setting initiative upload mode...")
+        self.logger.debug(f"Setting initiative upload mode {command.hex()}...")
         self._ser.write(command)
         time.sleep(0.1)
 
-    def get_co_ppm(self):
+    def get_initiative_co_ppm(self):
         if not self._ser or not self._ser.is_open:
             self.logger.error("Serial port not open")
             return None
@@ -78,11 +77,58 @@ class CarbonMonoxideDetector:
                     return None
         return None
 
+    def set_qa_mode(self):
+        if not self._ser or not self._ser.is_open:
+            self.logger.error("Serial port not open")
+            return False
+
+        command = bytearray([0xFF, 0x01, 0x78, 0x41, 0x00, 0x00, 0x00, 0x00])
+        checksum = CarbonMonoxideDetector._calculate_checksum(command)
+        command.append(checksum)
+
+        self.logger.debug(f"Setting question and answer mode {command.hex()}...")
+        self._ser.write(command)
+        time.sleep(0.1)
+
+    def get_qa_co_ppm(self):
+        if not self._ser or not self._ser.is_open:
+            self.logger.error("Serial port not open")
+            return None
+
+        command = bytearray([0xFF, 0x01, 0x86, 0x00, 0x00, 0x00, 0x00, 0x00])
+        checksum = CarbonMonoxideDetector._calculate_checksum(command)
+        command.append(checksum)
+
+        self.logger.debug(f"Requesting CO data {command.hex()}...")
+        self._ser.write(command)
+        time.sleep(0.1)
+
+        response = self._ser.read(self.PACKET_SIZE)
+        if len(response) == self.PACKET_SIZE and response[0] == 0xFF and response[1] == 0x86:
+            self.logger.debug(f"Received response {response.hex()}")
+
+            received_checksum = response[self.PACKET_SIZE - 1]
+            calculated_checksum = CarbonMonoxideDetector._calculate_checksum(response)
+
+            if received_checksum == calculated_checksum:
+                high_byte = response[2]
+                low_byte = response[3]
+                ppm = ((high_byte * 256) + low_byte) * 0.1
+
+                return ppm
+            else:
+                self.logger.warning("Checksum mismatch! Data corrupted.")
+                return None
+        return None
+
 # Example usage
 if __name__ == "__main__":
-    co_detector = CarbonMonoxideDetector()
+    co_detector = CarbonMonoxideDetector(level=logging.DEBUG)
+    #co_detector.set_initiative_upload_mode()
+    co_detector.set_qa_mode()
     while True:
-        co_ppm = co_detector.get_co_ppm()
+        #co_ppm = co_detector.get_initiative_co_ppm()
+        co_ppm = co_detector.get_qa_co_ppm()
         if co_ppm is not None:
             co_detector.logger.info(f"{datetime.now()}: CO Concentration: {co_ppm} PPM")
-        time.sleep(0.1)
+        time.sleep(3)
