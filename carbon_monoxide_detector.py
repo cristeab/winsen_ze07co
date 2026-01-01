@@ -119,6 +119,8 @@ class CarbonMonoxideDetector:
             else:
                 self.logger.warning("Checksum mismatch! Data corrupted.")
                 return None
+        else:
+            self.logger.warning("Invalid response length or header.")
         return None
 
 # Example usage
