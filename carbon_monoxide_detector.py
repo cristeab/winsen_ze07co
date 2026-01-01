@@ -42,17 +42,9 @@ class CarbonMonoxideDetector:
         checksum = CarbonMonoxideDetector._calculate_checksum(command)
         command.append(checksum)
 
+        self.logger.info("Setting initiative upload mode...")
         self._ser.write(command)
         time.sleep(0.1)
-
-        response = self._ser.read(self.PACKET_SIZE)
-        print(response.hex())
-        #if len(response) == self.PACKET_SIZE and response[2] == 0x78 and response[3] == 0x41:
-        #    self.logger.info("Sensor set to initiative upload mode.")
-        #    return True
-        #else:
-        #    self.logger.error("Failed to set initiative upload mode.")
-        #    return False
 
     def get_co_ppm(self):
         if not self._ser or not self._ser.is_open:
