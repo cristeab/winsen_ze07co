@@ -24,16 +24,35 @@ class CarbonMonoxideDetector:
         except serial.SerialException as e:
             self.logger.error(f"Serial Error: {e}")
             raise
+        self._set_initiative_upload_mode()
 
     @staticmethod
     def _calculate_checksum(data):
-        """
-        Checksum = (NOT (Byte1 + Byte2 + Byte3 + Byte4 + Byte5 + Byte6 + Byte7)) + 1
-        """
         payload = data[1:8]
         checksum = sum(payload) & 0xFF
         checksum = ((~checksum) & 0xFF) + 1
         return checksum & 0xFF
+
+    def _set_initiative_upload_mode(self):
+        if not self._ser or not self._ser.is_open:
+            self.logger.error("Serial port not open")
+            return False
+
+        command = bytearray([0xFF, 0x01, 0x78, 0x40, 0x00, 0x00, 0x00, 0x00])
+        checksum = CarbonMonoxideDetector._calculate_checksum(command)
+        command.append(checksum)
+
+        self._ser.write(command)
+        time.sleep(0.1)
+
+        response = self._ser.read(self.PACKET_SIZE)
+        print(response.hex())
+        #if len(response) == self.PACKET_SIZE and response[2] == 0x78 and response[3] == 0x41:
+        #    self.logger.info("Sensor set to initiative upload mode.")
+        #    return True
+        #else:
+        #    self.logger.error("Failed to set initiative upload mode.")
+        #    return False
 
     def get_co_ppm(self):
         if not self._ser or not self._ser.is_open:
@@ -57,7 +76,6 @@ class CarbonMonoxideDetector:
                 calculated_checksum = CarbonMonoxideDetector._calculate_checksum(full_packet)
                 
                 if received_checksum == calculated_checksum:
-                    # Concentration = MSB * 256 + LSB
                     high_byte = full_packet[4]
                     low_byte = full_packet[5]
                     ppm = ((high_byte * 256) + low_byte) * 0.1
